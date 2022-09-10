@@ -1,0 +1,95 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0, maximum-scale=1.0,user-scalable=0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>登录中...</title>
+    <style>
+        .text {
+            margin-top: 15vh;
+            font-size: 3vh;
+            text-align: center;
+        }
+
+            .text p {
+                color: #409eff;
+                letter-spacing: 1px;
+            }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <div class="text">
+            <p id="text">微信登录中,请稍等...</p>
+        </div>
+    </div>
+</body>
+
+</html>
+
+<script>
+    const userInfoKey = 'IHeperUserInfo'
+
+    var wxlib = {
+        wxcode: function () {
+            return this.getQueryString("code");
+        },
+        wxstate: function () {
+            return this.getQueryString("state");
+        },
+        redUrl: function () {
+            return this.getQueryString("redUrl");
+        },
+        login: function ( errFun) {
+            if (!this.wxcode()) {
+                return;
+            }
+            fetch(`./weixin/login?code=${this.wxcode()}&state=${this.wxstate()}`)
+                .then(async res => {
+                    if (res.ok) {
+                        let response = await res.json()
+                        localStorage.setItem(userInfoKey, JSON.stringify(response))
+                        loginSuccess()
+                    } else {
+                        errFun && errFun(await res.text())
+                    }
+                })
+        },
+        getQueryString: function (name) {
+            var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
+            var r = window.location.search.substr(1).match(reg);
+            if (r != null) return decodeURIComponent(r[2]); return null;
+        }
+    }
+    document.addEventListener('WeixinJSBridgeReady', () => {
+        try {
+            wxlib.login(a => alert(errMsg))
+        } catch (e) {
+            alert('登录失败,请重试');
+            WeixinJSBridge.call('closeWindow');
+        }
+    })
+
+    function loginSuccess() {
+        let redUrl = wxlib.redUrl();
+        if (!redUrl) {
+            document.getElementById('text').innerText = '登录成功,即将关闭窗口'
+            WeixinJSBridge.call('closeWindow');
+        } else {
+            location.href = redUrl;
+        }
+    }
+
+    let userInfo = localStorage.getItem(userInfoKey);
+    userInfo = userInfo ? JSON.parse(userInfo) : null;
+    if (!userInfo && !wxlib.wxcode()) {
+        let redUrl = wxlib.redUrl() ? encodeURIComponent(wxlib.redUrl()) : '';
+        fetch(`./weixin/LoginUrl?url=${redUrl}`).then(async res => {
+            location.href = await res.text();
+        })
+    }
+    userInfo && loginSuccess()
+</script>

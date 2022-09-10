@@ -1,0 +1,8 @@
+version: '3'
+services: 
+  ihelper: 
+    image: ihelper
+    container_name: ihelper
+    build: . 
+    ports: 
+      - "8005:80"
